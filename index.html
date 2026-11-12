@@ -22,7 +22,8 @@
         <button class="active" data-region="">五区域合计</button><button data-region="LATAM">LATAM</button><button data-region="KR">KR</button><button data-region="TWHK">TWHK</button><button data-region="SEA">SEA</button><button data-region="MEA">MEA</button>
       </div>
       <label>平台<select id="platformFilter"><option value="">全部平台</option></select></label>
-      <label>来源分类<select id="sourceFilter"><option value="">全部来源</option><option>水上</option><option>水下</option><option>自来水</option></select></label>
+      <div class="source-filter"><span>来源分类</span><div class="source-tabs" id="overviewSourceTabs" data-select="sourceFilter"></div></div>
+      <select id="sourceFilter" class="source-select" aria-label="传播总览来源分类"><option value="">全部来源</option><option>水上</option><option>水下</option><option>自来水</option></select>
       <label>发布阶段<select id="stageFilter"><option value="">全部阶段</option><option>上线前</option><option>上线后3天</option><option>上线后7天</option><option>上线后14天</option></select></label>
       <button class="quiet" id="clearOverview">清除</button>
     </section>
@@ -59,7 +60,8 @@
         <label>区域<select id="voiceRegion"><option value="">全部区域</option><option>LATAM</option><option>KR</option><option>TWHK</option><option>SEA</option><option>MEA</option></select></label>
         <label>平台<select id="voicePlatform"><option value="">全部平台</option></select></label>
         <label>内容类型<select id="voiceType"><option value="">全部类型</option></select></label>
-        <label>来源分类<select id="voiceSource"><option value="">全部来源</option><option>水上</option><option>水下</option><option>自来水</option></select></label>
+        <div class="source-filter"><span>来源分类</span><div class="source-tabs" id="voiceSourceTabs" data-select="voiceSource"></div></div>
+        <select id="voiceSource" class="source-select" aria-label="玩家反馈来源分类"><option value="">全部来源</option><option>水上</option><option>水下</option><option>自来水</option></select>
         <label>情绪<select id="voiceSentiment"><option value="">全部情绪</option><option value="1">正面</option><option value="0">中立</option><option value="-1">负面</option></select></label>
         <button class="quiet" id="clearVoice">清除</button>
       </div>

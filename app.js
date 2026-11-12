@@ -31,10 +31,18 @@
   addOptions(postInputs.platform, POSTS.map(x=>x.platform)); addOptions(postInputs.type, POSTS.map(x=>x.publishType));
   $('updatedAt').textContent=D.generatedAt || '—';
 
+  const sourceNames=['','水上','水下','自来水'];
+  function renderSourceTabs(id,select,rows){
+    $(id).innerHTML=sourceNames.map(value=>{const count=value?rows.filter(x=>x.sourceClass===value).length:rows.length;return `<button type="button" data-source="${value}" class="${select.value===value?'active':''}">${value||'全部'} <b>${count}</b></button>`}).join('');
+    $(id).querySelectorAll('button').forEach(button=>button.onclick=()=>{select.value=button.dataset.source;select.dispatchEvent(new Event('change'))});
+  }
+
   function overviewBaseRows(){return POSTS.filter(x=>(!overviewInputs.platform.value||x.platform===overviewInputs.platform.value)&&(!overviewInputs.source.value||x.sourceClass===overviewInputs.source.value)&&(!overviewInputs.stage.value||x.publishStage===overviewInputs.stage.value))}
   function overviewRows(){return overviewBaseRows().filter(x=>!overviewRegion||x.region===overviewRegion)}
   function bestGroup(rows,key){return [...new Set(rows.map(x=>x[key]).filter(Boolean))].map(name=>{const r=rows.filter(x=>x[key]===name);return {name,rows:r,...total(r)}}).sort((a,b)=>b.heat-a.heat)}
   function renderOverview(){
+    const sourceScope=POSTS.filter(x=>(!overviewRegion||x.region===overviewRegion)&&(!overviewInputs.platform.value||x.platform===overviewInputs.platform.value)&&(!overviewInputs.stage.value||x.publishStage===overviewInputs.stage.value));
+    renderSourceTabs('overviewSourceTabs',overviewInputs.source,sourceScope);
     const rows=overviewRows(), baseRows=overviewBaseRows(), t=total(rows), baseTotal=total(baseRows), regionGroups=bestGroup(baseRows,'region'), platformGroups=bestGroup(rows,'platform');
     const topRegion=regionGroups[0], topPlatform=platformGroups[0];
     const valid=rows.filter(x=>known(x.viewCount)&&num(x.viewCount)>0&&known(x.interactionCount));
@@ -83,8 +91,11 @@
 
   function voiceRows(){return COMMENTS.filter(x=>(!voiceInputs.region.value||x.region===voiceInputs.region.value)&&(!voiceInputs.platform.value||x.platform===voiceInputs.platform.value)&&(!voiceInputs.type.value||x.publishType===voiceInputs.type.value)&&(!voiceInputs.source.value||x.sourceClass===voiceInputs.source.value)&&(voiceInputs.sentiment.value===''||String(x.sentiment)===voiceInputs.sentiment.value))}
   function renderVoice(){
+    const sourceScope=COMMENTS.filter(x=>(!voiceInputs.region.value||x.region===voiceInputs.region.value)&&(!voiceInputs.platform.value||x.platform===voiceInputs.platform.value)&&(!voiceInputs.type.value||x.publishType===voiceInputs.type.value)&&(voiceInputs.sentiment.value===''||String(x.sentiment)===voiceInputs.sentiment.value));
+    renderSourceTabs('voiceSourceTabs',voiceInputs.source,sourceScope);
     const rows=voiceRows(),counts=[rows.filter(x=>x.sentiment===1).length,rows.filter(x=>x.sentiment===0).length,rows.filter(x=>x.sentiment===-1).length],den=rows.length||1;
-    $('voiceCount').textContent=rows.length; $('voiceCoverage').textContent=`${D.commentCoverage.videos||0}条视频 · ${fmt(D.commentCoverage.sampled||COMMENTS.length)}条评论样本`;
+    const sourceLabel=voiceInputs.source.value||'全部来源',sourceCoverage=D.commentCoverage.bySource?.[voiceInputs.source.value];
+    $('voiceCount').textContent=rows.length; $('voiceCoverage').textContent=sourceCoverage?`${sourceLabel} · ${sourceCoverage.videos}条内容 · ${fmt(sourceCoverage.samples)}条评论样本`:`${D.commentCoverage.videos||0}条内容 · ${fmt(D.commentCoverage.sampled||COMMENTS.length)}条评论样本`;
     $('sentimentBar').innerHTML=counts.map(x=>`<span style="width:${x/den*100}%"></span>`).join(''); $('sentimentLegend').innerHTML=['正面','中立','负面'].map((n,i)=>`<div><span>${n}</span><strong>${rows.length?pct(counts[i]/rows.length):'0.0%'}</strong></div>`).join('');
     const themes={}; rows.forEach(x=>(x.themes||[]).forEach(t=>themes[t]=(themes[t]||0)+1)); const top=Object.entries(themes).sort((a,b)=>b[1]-a[1]).slice(0,7); $('themes').innerHTML=top.map(([n,v])=>`<span>${esc(n)} <strong>${v}</strong></span>`).join('')||'<span>暂无主题样本</span>';
     const dominant=counts.indexOf(Math.max(...counts)),labels=['正面','中立','负面']; $('voiceFinding').textContent=rows.length?`当前筛选中${labels[dominant]}评论占比最高（${pct(counts[dominant]/rows.length)}）。讨论最多的主题是${top[0]?.[0]||'未分类'}。评论样本说明讨论方向，不代表全部玩家。`:'当前筛选暂无已匹配评论。';
