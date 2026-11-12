@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0a0c10">
+  <title>Monster Hunter Outlanders 海外创作者传播观察</title>
+  <meta name="description" content="基于公开帖子、直播与评论样本的海外创作者传播观察。">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap header-row">
+      <a class="brand" href="#top"><span>M</span><div><strong>Monster Hunter Outlanders</strong><small>Creator & Player Voice Monitor</small></div></a>
+      <nav><a href="#overview">总览</a><a href="#breakdown">表现拆解</a><a href="#voice">玩家反馈</a><a href="#live">Live</a><a href="#posts">公开内容</a></nav>
+    </div>
+  </header>
+
+  <main id="top" class="wrap">
+    <section class="intro">
+      <div><p class="eyebrow">PUBLIC DATA MONITOR</p><h1>海外创作者传播观察</h1><p>用公开帖子、直播和评论样本观察五个区域的传播规模、互动质量与玩家反馈。</p></div>
+      <div class="stamp"><span>数据更新</span><strong id="updatedAt">—</strong><small>公开平台快照</small></div>
+    </section>
+
+    <section class="filterbar" aria-label="总览筛选">
+      <div class="region-tabs" id="regionTabs">
+        <button class="active" data-region="">五区域合计</button><button data-region="LATAM">LATAM</button><button data-region="KR">KR</button><button data-region="TWHK">TWHK</button><button data-region="SEA">SEA</button><button data-region="MEA">MEA</button>
+      </div>
+      <label>平台<select id="platformFilter"><option value="">全部平台</option></select></label>
+      <label>发布阶段<select id="stageFilter"><option value="">全部阶段</option><option>上线前</option><option>上线后3天</option><option>上线后7天</option><option>上线后14天</option></select></label>
+      <button class="quiet" id="clearOverview">清除</button>
+    </section>
+
+    <section id="overview" class="section">
+      <div class="section-head"><div><p class="eyebrow">EXECUTIVE VIEW</p><h2>先看结论</h2></div><p id="scopeText">五区域合计</p></div>
+      <article class="verdict"><span>当前观察</span><strong id="headline">—</strong><p id="headlineDetail">—</p></article>
+      <div class="metrics">
+        <article><span>公开播放量</span><strong id="totalViews">—</strong><small id="viewCoverage">—</small></article>
+        <article><span>公开互动量</span><strong id="totalInteractions">—</strong><small id="interactionCoverage">—</small></article>
+        <article><span>整体互动率</span><strong id="overallRate">—</strong><small>互动量 ÷ 播放量</small></article>
+        <article><span>已收录内容</span><strong id="postCount">—</strong><small id="creatorCount">—</small></article>
+      </div>
+      <div class="insight-grid" id="insightGrid"></div>
+    </section>
+
+    <section id="breakdown" class="section">
+      <div class="section-head"><div><p class="eyebrow">PERFORMANCE</p><h2>表现拆解</h2></div><p>规模和互动质量分开看</p></div>
+      <div class="two-col">
+        <article class="panel"><div class="panel-head"><div><h3>区域表现</h3><p>热度、互动率与内容量</p></div></div><div id="regionChart" class="bar-list"></div></article>
+        <article class="panel"><div class="panel-head"><div><h3>平台表现</h3><p>不同平台的贡献结构</p></div></div><div id="platformChart" class="bar-list"></div></article>
+      </div>
+      <div class="two-col analysis-row">
+        <article class="panel"><div class="panel-head"><div><h3>发布阶段变化</h3><p>以 10 月 29 日为上线日</p></div></div><div id="stageChart" class="stage-grid"></div></article>
+        <article class="panel"><div class="panel-head"><div><h3>内容表现四象限</h3><p>播放规模 × 互动率</p></div></div><div id="quadrant" class="quadrant"></div></article>
+      </div>
+      <article class="panel ranking-panel"><div class="panel-head"><div><h3>公开内容表现</h3><p>高播放与高互动内容不一定相同</p></div><div class="tabset"><button class="active" data-ranking="views">按播放</button><button data-ranking="rate">按互动率</button></div></div><div id="ranking" class="ranking"></div></article>
+    </section>
+
+    <section id="voice" class="section">
+      <div class="section-head"><div><p class="eyebrow">PLAYER VOICE</p><h2>玩家反馈</h2></div><p id="voiceCoverage">—</p></div>
+      <div class="module-filters">
+        <label>区域<select id="voiceRegion"><option value="">全部区域</option><option>LATAM</option><option>KR</option><option>TWHK</option><option>SEA</option><option>MEA</option></select></label>
+        <label>平台<select id="voicePlatform"><option value="">全部平台</option></select></label>
+        <label>内容类型<select id="voiceType"><option value="">全部类型</option></select></label>
+        <label>情绪<select id="voiceSentiment"><option value="">全部情绪</option><option value="1">正面</option><option value="0">中立</option><option value="-1">负面</option></select></label>
+        <button class="quiet" id="clearVoice">清除</button>
+      </div>
+      <div class="voice-grid">
+        <article class="panel sentiment-panel"><div class="sentiment-total"><span>当前评论样本</span><strong id="voiceCount">0</strong></div><div class="sentiment-bar" id="sentimentBar"></div><div id="sentimentLegend" class="sentiment-legend"></div><h3>主要讨论主题</h3><div id="themes" class="themes"></div><p class="finding" id="voiceFinding">—</p></article>
+        <article class="panel"><div class="panel-head"><div><h3>高互动玩家原声</h3><p>中文要点在上，原文在下</p></div></div><div id="commentList" class="comment-list"></div><button id="moreComments" class="more">查看更多</button></article>
+      </div>
+    </section>
+
+    <section id="live" class="section">
+      <div class="section-head"><div><p class="eyebrow live-label">LIVE</p><h2><i></i>正在直播</h2></div><p id="liveMeta">—</p></div>
+      <div class="module-filters"><label>区域<select id="liveRegion"><option value="">全部区域</option><option>LATAM</option><option>KR</option><option>TWHK</option><option>SEA</option><option>MEA</option></select></label><label>平台<select id="livePlatform"><option value="">全部平台</option></select></label><button class="quiet" id="clearLive">清除</button></div>
+      <div id="liveGrid" class="live-grid"></div>
+    </section>
+
+    <section id="posts" class="section">
+      <div class="section-head"><div><p class="eyebrow">PUBLIC POSTS</p><h2>公开内容</h2></div><p><strong id="resultCount">0</strong> 条结果</p></div>
+      <div class="module-filters post-filters">
+        <label>区域<select id="postRegion"><option value="">全部区域</option><option>LATAM</option><option>KR</option><option>TWHK</option><option>SEA</option><option>MEA</option></select></label>
+        <label>平台<select id="postPlatform"><option value="">全部平台</option></select></label>
+        <label>发布类型<select id="postType"><option value="">全部类型</option></select></label>
+        <label>发布阶段<select id="postStage"><option value="">全部阶段</option><option>上线前</option><option>上线后3天</option><option>上线后7天</option><option>上线后14天</option></select></label>
+        <button class="quiet" id="clearPosts">清除</button>
+      </div>
+      <div class="post-tools"><input id="postSearch" type="search" placeholder="搜索创作者或标题"><div class="tabset" id="sortTabs"><button class="active" data-sort="views">播放量</button><button data-sort="interactions">互动量</button><button data-sort="rate">互动率</button><button data-sort="date">发布时间</button><button id="sortDirection">↓ 降序</button></div></div>
+      <div id="postGrid" class="post-grid"></div><div id="pagination" class="pagination"></div>
+    </section>
+
+    <section class="method"><strong>数据说明</strong><p>本页仅使用公开网页可见的帖子、直播与评论样本。互动量为公开点赞、评论、分享等指标之和；不同平台的公开口径并不完全一致。评论样本用于说明讨论主题，不代表全部玩家。趋势按内容发布日期归因，不是历史播放快照。本页面为非官方数据观察，不代表游戏官方统计或立场。</p></section>
+  </main>
+  <footer><div class="wrap">Monster Hunter Outlanders · Public creator and player voice monitor</div></footer>
+  <script src="data.js"></script><script src="app.js"></script>
+</body>
+</html>
