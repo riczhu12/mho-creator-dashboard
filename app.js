@@ -10,10 +10,10 @@
   const compact = value => new Intl.NumberFormat('zh-CN',{notation:'compact',maximumFractionDigits:1}).format(num(value));
   const pct = value => `${(num(value)*100).toFixed(1)}%`;
   const esc = value => String(value ?? '').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  const heat = item => num(item.viewCount)+num(item.interactionCount);
+  const heat = item => num(item.viewCount);
   const rate = item => num(item.viewCount)>0 ? num(item.interactionCount)/num(item.viewCount) : 0;
   const addOptions = (select, values) => [...new Set(values.filter(Boolean))].sort().forEach(value=>{const o=document.createElement('option');o.value=value;o.textContent=value;select.appendChild(o)});
-  const total = rows => {const views=rows.reduce((s,x)=>s+num(x.viewCount),0), interactions=rows.reduce((s,x)=>s+num(x.interactionCount),0);return {views,interactions,heat:views+interactions,rate:views?interactions/views:0,viewCoverage:rows.filter(x=>known(x.viewCount)).length,interactionCoverage:rows.filter(x=>known(x.interactionCount)).length}};
+  const total = rows => {const views=rows.reduce((s,x)=>s+num(x.viewCount),0), interactions=rows.reduce((s,x)=>s+num(x.interactionCount),0);return {views,interactions,heat:views,rate:views?interactions/views:0,viewCoverage:rows.filter(x=>known(x.viewCount)).length,interactionCoverage:rows.filter(x=>known(x.interactionCount)).length}};
   const median = values => {const a=values.filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return 0;const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2};
   const thumbnail = item => item.coverUrl || '';
   const platformCode = value => ({YouTube:'YT',TikTok:'TT',Twitch:'TW',Facebook:'FB',Instagram:'IG'}[value] || String(value||'MHO').slice(0,2).toUpperCase());
@@ -39,7 +39,7 @@
 
   function overviewBaseRows(){return POSTS.filter(x=>(!overviewInputs.platform.value||x.platform===overviewInputs.platform.value)&&(!overviewInputs.source.value||x.sourceClass===overviewInputs.source.value)&&(!overviewInputs.stage.value||x.publishStage===overviewInputs.stage.value))}
   function overviewRows(){return overviewBaseRows().filter(x=>!overviewRegion||x.region===overviewRegion)}
-  function bestGroup(rows,key){return [...new Set(rows.map(x=>x[key]).filter(Boolean))].map(name=>{const r=rows.filter(x=>x[key]===name);return {name,rows:r,...total(r)}}).sort((a,b)=>b.heat-a.heat)}
+  function bestGroup(rows,key){return [...new Set(rows.map(x=>x[key]).filter(Boolean))].map(name=>{const r=rows.filter(x=>x[key]===name);return {name,rows:r,...total(r)}}).sort((a,b)=>b.views-a.views)}
   function renderOverview(){
     const sourceScope=POSTS.filter(x=>(!overviewRegion||x.region===overviewRegion)&&(!overviewInputs.platform.value||x.platform===overviewInputs.platform.value)&&(!overviewInputs.stage.value||x.publishStage===overviewInputs.stage.value));
     renderSourceTabs('overviewSourceTabs',overviewInputs.source,sourceScope);
@@ -50,32 +50,33 @@
     const topEngagement=[...regionGroups].filter(x=>x.views>0).sort((a,b)=>b.rate-a.rate)[0];
     const scope=[overviewRegion||'五区域合计',overviewInputs.platform.value||'全部平台',overviewInputs.source.value||'全部来源',overviewInputs.stage.value||'全部阶段'].join(' · '); $('scopeText').textContent=scope;
     $('totalViews').textContent=compact(t.views); $('totalInteractions').textContent=compact(t.interactions); $('overallRate').textContent=pct(t.rate); $('postCount').textContent=rows.length; $('creatorCount').textContent=`${new Set(rows.map(x=>x.creator)).size} 位创作者`; $('viewCoverage').textContent=`${t.viewCoverage}/${rows.length} 条公开`; $('interactionCoverage').textContent=`${t.interactionCoverage}/${rows.length} 条公开`;
-    const selectedShare=baseTotal.heat?t.heat/baseTotal.heat:0, averageHeat=baseTotal.heat/REGIONS.length, vsAverage=averageHeat?t.heat/averageHeat-1:0, topPlatformShare=t.heat&&topPlatform?topPlatform.heat/t.heat:0;
+    const selectedShare=baseTotal.views?t.views/baseTotal.views:0, averageViews=baseTotal.views/REGIONS.length, vsAverage=averageViews?t.views/averageViews-1:0, topPlatformShare=t.views&&topPlatform?topPlatform.views/t.views:0;
     if(overviewRegion){
-      $('headline').textContent=t.heat?`${overviewRegion}贡献五区域${pct(selectedShare)}热度，较单区域平均${vsAverage>=0?'高':'低'}${pct(Math.abs(vsAverage))}`:`${overviewRegion}当前筛选暂无公开热度`;
-      $('headlineDetail').textContent=t.heat?`${topPlatform?.name||'—'}贡献该区域${pct(topPlatformShare)}热度；头部10条内容贡献${pct(concentration)}播放。当前互动率${pct(t.rate)}，五区域同口径为${pct(baseTotal.rate)}。`:'请调整平台、来源或阶段筛选。';
-      $('insightGrid').innerHTML=[['区域占比',`${pct(selectedShare)}五区域热度`,'按相同平台、来源和阶段口径计算。'],['对比均值',`较单区域平均${vsAverage>=0?'高':'低'}${pct(Math.abs(vsAverage))}`,'单区域平均＝当前筛选五区域总热度÷5。'],['互动质量',`${pct(t.rate)} vs 全区${pct(baseTotal.rate)}`,'互动率用于观察公开回应强度，不等同于留存或付费。']].map(x=>`<article><span>${x[0]}</span><strong>${x[1]}</strong><p>${x[2]}</p></article>`).join('');
+      $('headline').textContent=t.views?`${overviewRegion}贡献五区域${pct(selectedShare)}公开播放量，较单区域平均${vsAverage>=0?'高':'低'}${pct(Math.abs(vsAverage))}`:`${overviewRegion}当前筛选暂无公开播放量`;
+      $('headlineDetail').textContent=t.views?`${topPlatform?.name||'—'}贡献该区域${pct(topPlatformShare)}公开播放量；头部10条内容贡献${pct(concentration)}播放。当前互动率${pct(t.rate)}，五区域同口径为${pct(baseTotal.rate)}。`:'请调整平台、来源或阶段筛选。';
+      $('insightGrid').innerHTML=[['区域播放占比',`${pct(selectedShare)}五区域播放量`,'按相同平台、来源和阶段口径计算。'],['对比均值',`较单区域平均${vsAverage>=0?'高':'低'}${pct(Math.abs(vsAverage))}`,'单区域平均＝当前筛选五区域公开播放量÷5。'],['互动质量',`${pct(t.rate)} vs 全区${pct(baseTotal.rate)}`,'互动率用于观察公开回应强度，不等同于留存或付费。']].map(x=>`<article><span>${x[0]}</span><strong>${x[1]}</strong><p>${x[2]}</p></article>`).join('');
     }else{
-      const regionShare=baseTotal.heat&&topRegion?topRegion.heat/baseTotal.heat:0;
-      $('headline').textContent=topRegion?`${topRegion.name}贡献五区域最多热度`:'当前筛选暂无公开数据';
-      $('headlineDetail').textContent=topRegion?`${topRegion.name}占五区域${pct(regionShare)}热度；${topPlatform?.name||'—'}是贡献最高的平台。头部10条内容贡献${pct(concentration)}播放，传播规模${concentration>.65?'较集中':'有一定集中'}。`:'请调整筛选条件。';
+      const regionShare=baseTotal.views&&topRegion?topRegion.views/baseTotal.views:0;
+      $('headline').textContent=topRegion?`${topRegion.name}累计公开播放量最高`:'当前筛选暂无公开数据';
+      $('headlineDetail').textContent=topRegion?`${topRegion.name}占五区域${pct(regionShare)}公开播放量；${topPlatform?.name||'—'}是播放贡献最高的平台。头部10条内容贡献${pct(concentration)}播放，传播规模${concentration>.65?'较集中':'有一定集中'}。`:'请调整筛选条件。';
       $('insightGrid').innerHTML=[['区域结构',topRegion?`${topRegion.name}占${pct(regionShare)}`:'—','区域贡献并不平均，整体结果需结合区域结构解释。'],['内容集中',`${pct(concentration)}来自头部10条`,'少数高播放内容会显著抬高总量。'],['互动质量',topEngagement?`${topEngagement.name}互动率${pct(topEngagement.rate)}`:'—','互动率用于观察公开回应强度，不等同于留存或付费。']].map(x=>`<article><span>${x[0]}</span><strong>${x[1]}</strong><p>${x[2]}</p></article>`).join('');
     }
     document.querySelectorAll('#regionTabs button').forEach(b=>b.classList.toggle('active',b.dataset.region===overviewRegion));
     renderBreakdown(rows);
   }
 
-  function renderBars(id,groups){const max=Math.max(1,...groups.map(x=>x.heat));$(id).innerHTML=groups.map(g=>`<div class="bar-row"><div class="bar-label">${esc(g.name)}</div><div class="bar-track"><i style="width:${g.heat/max*100}%"></i></div><div class="bar-meta"><strong>${compact(g.heat)}</strong> 热度 · ${pct(g.rate)} · ${g.rows.length}条</div></div>`).join('')||'<p>暂无数据</p>'}
+  function renderBars(id,groups){const max=Math.max(1,...groups.map(x=>x.views));$(id).innerHTML=groups.map(g=>`<div class="bar-row"><div class="bar-label">${esc(g.name)}</div><div class="bar-track"><i style="width:${g.views/max*100}%"></i></div><div class="bar-meta"><strong>${compact(g.views)}</strong> 播放 · ${pct(g.rate)} · ${g.rows.length}条</div></div>`).join('')||'<p>暂无数据</p>'}
   function renderTrend(rows){
-    const start=new Date('2026-10-29T00:00:00+08:00'),series=Array.from({length:15},(_,i)=>{const d=new Date(start.getTime()+i*86400000),key=`2026-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,daily=rows.filter(x=>x.publishDate===key);return{label:`${d.getMonth()+1}/${d.getDate()}`,value:daily.reduce((s,x)=>s+heat(x),0),count:daily.length}}),w=900,h=190,p={l:50,r:18,t:14,b:30},actual=Math.max(...series.map(x=>x.value)),max=Math.max(actual,1),x=i=>p.l+i*(w-p.l-p.r)/(series.length-1),y=v=>p.t+(h-p.t-p.b)*(1-v/max),line=series.map((d,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(d.value).toFixed(1)}`).join(' '),area=`${line} L${x(series.length-1)},${h-p.b} L${x(0)},${h-p.b} Z`;
-    $('trendTitle').textContent=`${overviewRegion||'五区域'}上线以来热度变化`; $('trendPeak').textContent=actual?`峰值 ${compact(actual)}`:'当前筛选无上线后数据'; $('trendChart').innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img"><defs><linearGradient id="tf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a241" stop-opacity=".3"/><stop offset="1" stop-color="#f0a241" stop-opacity="0"/></linearGradient></defs><line x1="${p.l}" x2="${w-p.r}" y1="${h-p.b}" y2="${h-p.b}" class="grid-line"/><path d="${area}" fill="url(#tf)"/><path d="${line}" class="trend-line"/>${series.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d.value)}" r="3"><title>${d.label} · ${fmt(d.value)}热度 · ${d.count}条</title></circle>`).join('')}${series.filter((_,i)=>[0,4,9,14].includes(i)).map(d=>{const i=series.indexOf(d);return`<text x="${x(i)}" y="${h-8}" text-anchor="middle">${d.label}</text>`}).join('')}</svg>`;
+    const start=new Date('2026-10-29T00:00:00+08:00'),end=new Date(`${D.generatedAt||'2026-11-13'}T00:00:00+08:00`),days=Math.max(1,Math.floor((end-start)/86400000)+1),series=Array.from({length:days},(_,i)=>{const d=new Date(start.getTime()+i*86400000),key=`2026-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,daily=rows.filter(x=>x.publishDate===key);return{date:key,label:`${d.getMonth()+1}/${d.getDate()}`,views:daily.reduce((s,x)=>s+num(x.viewCount),0),interactions:daily.reduce((s,x)=>s+num(x.interactionCount),0),count:daily.length}}),w=900,h=205,p={l:50,r:18,t:14,b:38},actual=Math.max(...series.map(x=>x.views)),max=Math.max(actual,1),x=i=>p.l+i*(w-p.l-p.r)/Math.max(1,series.length-1),y=v=>p.t+(h-p.t-p.b)*(1-v/max),line=series.map((d,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(d.views).toFixed(1)}`).join(' '),area=`${line} L${x(series.length-1)},${h-p.b} L${x(0)},${h-p.b} Z`;
+    $('trendTitle').textContent=`${overviewRegion||'五区域'}上线以来公开播放量`; $('trendPeak').textContent=actual?`单日发布内容峰值 ${compact(actual)}`:'当前筛选无上线后播放数据'; $('trendChart').innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="按发布日期汇总的公开播放量曲线"><defs><linearGradient id="tf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a241" stop-opacity=".3"/><stop offset="1" stop-color="#f0a241" stop-opacity="0"/></linearGradient></defs><line x1="${p.l}" x2="${w-p.r}" y1="${h-p.b}" y2="${h-p.b}" class="grid-line"/><path d="${area}" fill="url(#tf)"/><path d="${line}" class="trend-line"/>${series.map((d,i)=>`<circle class="trend-hit" tabindex="0" cx="${x(i)}" cy="${y(d.views)}" r="11" data-date="${d.date}" data-views="${d.views}" data-interactions="${d.interactions}" data-count="${d.count}"/><circle class="trend-dot" cx="${x(i)}" cy="${y(d.views)}" r="3"/>`).join('')}${series.map((d,i)=>`<text x="${x(i)}" y="${h-11}" text-anchor="middle">${d.label}</text>`).join('')}</svg><div class="trend-tooltip" role="status"></div>`;
+    const chart=$('trendChart'),tip=chart.querySelector('.trend-tooltip'),show=(point,event)=>{tip.innerHTML=`<strong>${point.dataset.date}</strong><span>公开播放量 ${fmt(point.dataset.views)}</span><span>公开互动量 ${fmt(point.dataset.interactions)}</span><small>当日发布 ${point.dataset.count} 条</small>`;const rect=chart.getBoundingClientRect(),svg=chart.querySelector('svg').getBoundingClientRect(),left=event?.clientX?event.clientX-rect.left:(Number(point.getAttribute('cx'))/w)*svg.width,top=event?.clientY?event.clientY-rect.top:(Number(point.getAttribute('cy'))/h)*svg.height;tip.style.left=`${Math.min(rect.width-135,Math.max(80,left))}px`;tip.style.top=`${Math.max(8,top-12)}px`;tip.classList.add('show')};chart.querySelectorAll('.trend-hit').forEach(point=>{point.onpointerenter=e=>show(point,e);point.onpointermove=e=>show(point,e);point.onpointerleave=()=>tip.classList.remove('show');point.onfocus=e=>show(point,e);point.onblur=()=>tip.classList.remove('show')});
   }
   function renderBreakdown(rows){
     renderTrend(rows);
     const comparisonRows=overviewBaseRows();
     renderBars('regionChart',REGIONS.map(name=>{const r=comparisonRows.filter(x=>x.region===name);return{name,rows:r,...total(r)}}));
     renderBars('platformChart',bestGroup(rows,'platform'));
-    $('stageChart').innerHTML=STAGES.map(name=>{const r=rows.filter(x=>x.publishStage===name),t=total(r);return `<div class="stage-card"><span>${name}</span><strong>${compact(t.heat)}</strong><small>${r.length}条 · ${pct(t.rate)}互动率</small></div>`}).join('');
+    $('stageChart').innerHTML=STAGES.map(name=>{const r=rows.filter(x=>x.publishStage===name),t=total(r);return `<div class="stage-card"><span>${name}</span><strong>${compact(t.views)} 播放</strong><small>${r.length}条 · ${pct(t.rate)}互动率</small></div>`}).join('');
     renderRanking(rows);
   }
   function renderRanking(rows=overviewRows()){
