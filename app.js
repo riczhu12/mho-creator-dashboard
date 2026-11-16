@@ -3,6 +3,7 @@
   const POSTS = D.posts || [], COMMENTS = D.comments || [], LIVE = D.live || [];
   const REGIONS = ['LATAM','KR','TWHK','SEA','MEA'];
   const STAGES = ['上线前','上线后3天','上线后7天','上线后14天'];
+  const TYPES = ['发帖','视频','直播','直播回放'];
   const $ = id => document.getElementById(id);
   const num = value => Number.isFinite(Number(value)) ? Number(value) : 0;
   const known = value => value !== null && value !== '' && Number.isFinite(Number(value));
@@ -13,19 +14,20 @@
   const heat = item => num(item.viewCount);
   const rate = item => num(item.viewCount)>0 ? num(item.interactionCount)/num(item.viewCount) : 0;
   const addOptions = (select, values) => [...new Set(values.filter(Boolean))].sort().forEach(value=>{const o=document.createElement('option');o.value=value;o.textContent=value;select.appendChild(o)});
-  const total = rows => {const views=rows.reduce((s,x)=>s+num(x.viewCount),0), interactions=rows.reduce((s,x)=>s+num(x.interactionCount),0);return {views,interactions,heat:views,rate:views?interactions/views:0,viewCoverage:rows.filter(x=>known(x.viewCount)).length,interactionCoverage:rows.filter(x=>known(x.interactionCount)).length}};
+  const total = rows => {const views=rows.reduce((s,x)=>s+num(x.viewCount),0), interactions=rows.reduce((s,x)=>s+num(x.interactionCount),0), comparable=rows.filter(x=>known(x.viewCount)&&num(x.viewCount)>0&&known(x.interactionCount)), rateViews=comparable.reduce((s,x)=>s+num(x.viewCount),0), rateInteractions=comparable.reduce((s,x)=>s+num(x.interactionCount),0);return {views,interactions,heat:views,rate:rateViews?rateInteractions/rateViews:0,viewCoverage:rows.filter(x=>known(x.viewCount)).length,interactionCoverage:rows.filter(x=>known(x.interactionCount)).length,rateCoverage:comparable.length}};
   const median = values => {const a=values.filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return 0;const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2};
   const thumbnail = item => item.coverUrl || '';
   const platformCode = value => ({YouTube:'YT',TikTok:'TT',Twitch:'TW',Facebook:'FB',Instagram:'IG'}[value] || String(value||'MHO').slice(0,2).toUpperCase());
   const coverMarkup = item => `<div class="cover-fallback platform-${esc(String(item.platform||'other').toLowerCase())}"><b>${esc(platformCode(item.platform))}</b><span>${esc(item.creator||'Creator')}</span><small>${esc(item.region||'')} · ${esc(item.sourceClass||'')}</small></div>${thumbnail(item)?`<img src="${esc(thumbnail(item))}" alt="${esc(item.creator||'内容')}封面" loading="lazy" onerror="this.remove()">`:''}`;
 
   let overviewRegion='', rankingMode='views', commentsShown=8, postPage=1, sortMode='views', sortDirection='desc';
-  const overviewInputs={platform:$('platformFilter'),source:$('sourceFilter'),stage:$('stageFilter')};
+  const overviewInputs={platform:$('platformFilter'),type:$('typeFilter'),source:$('sourceFilter'),stage:$('stageFilter')};
   const voiceInputs={region:$('voiceRegion'),platform:$('voicePlatform'),type:$('voiceType'),source:$('voiceSource'),sentiment:$('voiceSentiment')};
   const liveInputs={region:$('liveRegion'),platform:$('livePlatform'),source:$('liveSource')};
   const postInputs={region:$('postRegion'),platform:$('postPlatform'),type:$('postType'),source:$('postSource'),stage:$('postStage'),search:$('postSearch')};
 
   addOptions(overviewInputs.platform, POSTS.map(x=>x.platform));
+  addOptions(overviewInputs.type, POSTS.map(x=>x.publishType));
   addOptions(voiceInputs.platform, COMMENTS.map(x=>x.platform)); addOptions(voiceInputs.type, COMMENTS.map(x=>x.publishType));
   addOptions(liveInputs.platform, LIVE.map(x=>x.platform));
   addOptions(postInputs.platform, POSTS.map(x=>x.platform)); addOptions(postInputs.type, POSTS.map(x=>x.publishType));
@@ -37,24 +39,25 @@
     $(id).querySelectorAll('button').forEach(button=>button.onclick=()=>{select.value=button.dataset.source;select.dispatchEvent(new Event('change'))});
   }
 
-  function overviewBaseRows(){return POSTS.filter(x=>(!overviewInputs.platform.value||x.platform===overviewInputs.platform.value)&&(!overviewInputs.source.value||x.sourceClass===overviewInputs.source.value)&&(!overviewInputs.stage.value||x.publishStage===overviewInputs.stage.value))}
+  function overviewBaseRows(){return POSTS.filter(x=>(!overviewInputs.platform.value||x.platform===overviewInputs.platform.value)&&(!overviewInputs.type.value||x.publishType===overviewInputs.type.value)&&(!overviewInputs.source.value||x.sourceClass===overviewInputs.source.value)&&(!overviewInputs.stage.value||x.publishStage===overviewInputs.stage.value))}
   function overviewRows(){return overviewBaseRows().filter(x=>!overviewRegion||x.region===overviewRegion)}
   function bestGroup(rows,key){return [...new Set(rows.map(x=>x[key]).filter(Boolean))].map(name=>{const r=rows.filter(x=>x[key]===name);return {name,rows:r,...total(r)}}).sort((a,b)=>b.views-a.views)}
   function renderOverview(){
-    const sourceScope=POSTS.filter(x=>(!overviewRegion||x.region===overviewRegion)&&(!overviewInputs.platform.value||x.platform===overviewInputs.platform.value)&&(!overviewInputs.stage.value||x.publishStage===overviewInputs.stage.value));
+    const sourceScope=POSTS.filter(x=>(!overviewRegion||x.region===overviewRegion)&&(!overviewInputs.platform.value||x.platform===overviewInputs.platform.value)&&(!overviewInputs.type.value||x.publishType===overviewInputs.type.value)&&(!overviewInputs.stage.value||x.publishStage===overviewInputs.stage.value));
     renderSourceTabs('overviewSourceTabs',overviewInputs.source,sourceScope);
     const rows=overviewRows(), baseRows=overviewBaseRows(), t=total(rows), baseTotal=total(baseRows), regionGroups=bestGroup(baseRows,'region'), platformGroups=bestGroup(rows,'platform');
     const topRegion=regionGroups[0], topPlatform=platformGroups[0];
-    const valid=rows.filter(x=>known(x.viewCount)&&num(x.viewCount)>0&&known(x.interactionCount));
-    const topTen=[...valid].sort((a,b)=>b.viewCount-a.viewCount).slice(0,10); const concentration=t.views?topTen.reduce((s,x)=>s+num(x.viewCount),0)/t.views:0;
-    const topEngagement=[...regionGroups].filter(x=>x.views>0).sort((a,b)=>b.rate-a.rate)[0];
-    const scope=[overviewRegion||'五区域合计',overviewInputs.platform.value||'全部平台',overviewInputs.source.value||'全部来源',overviewInputs.stage.value||'全部阶段'].join(' · '); $('scopeText').textContent=scope;
-    $('totalViews').textContent=compact(t.views); $('totalInteractions').textContent=compact(t.interactions); $('overallRate').textContent=pct(t.rate); $('postCount').textContent=rows.length; $('creatorCount').textContent=`${new Set(rows.map(x=>x.creator)).size} 位创作者`; $('viewCoverage').textContent=`${t.viewCoverage}/${rows.length} 条公开`; $('interactionCoverage').textContent=`${t.interactionCoverage}/${rows.length} 条公开`;
+    const viewable=rows.filter(x=>known(x.viewCount)&&num(x.viewCount)>0);
+    const topTen=[...viewable].sort((a,b)=>b.viewCount-a.viewCount).slice(0,10); const concentration=t.views?topTen.reduce((s,x)=>s+num(x.viewCount),0)/t.views:0;
+    const topEngagement=[...regionGroups].filter(x=>x.rateCoverage>0).sort((a,b)=>b.rate-a.rate)[0];
+    const scope=[overviewRegion||'五区域合计',overviewInputs.platform.value||'全部平台',overviewInputs.type.value||'全部内容',overviewInputs.source.value||'全部来源',overviewInputs.stage.value||'全部阶段'].join(' · '); $('scopeText').textContent=scope;
+    $('totalViews').textContent=t.viewCoverage?compact(t.views):'—'; $('totalInteractions').textContent=t.interactionCoverage?compact(t.interactions):'—'; $('overallRate').textContent=t.rateCoverage?pct(t.rate):'—'; $('postCount').textContent=rows.length; $('creatorCount').textContent=`${new Set(rows.map(x=>x.creator)).size} 位创作者`; $('viewCoverage').textContent=`${t.viewCoverage}/${rows.length} 条公开`; $('interactionCoverage').textContent=`${t.interactionCoverage}/${rows.length} 条公开`;
+    const rateText=t.rateCoverage?pct(t.rate):'暂无可比口径',baseRateText=baseTotal.rateCoverage?pct(baseTotal.rate):'暂无可比口径';
     const selectedShare=baseTotal.views?t.views/baseTotal.views:0, averageViews=baseTotal.views/REGIONS.length, vsAverage=averageViews?t.views/averageViews-1:0, topPlatformShare=t.views&&topPlatform?topPlatform.views/t.views:0;
     if(overviewRegion){
       $('headline').textContent=t.views?`${overviewRegion}贡献五区域${pct(selectedShare)}公开播放量，较单区域平均${vsAverage>=0?'高':'低'}${pct(Math.abs(vsAverage))}`:`${overviewRegion}当前筛选暂无公开播放量`;
-      $('headlineDetail').textContent=t.views?`${topPlatform?.name||'—'}贡献该区域${pct(topPlatformShare)}公开播放量；头部10条内容贡献${pct(concentration)}播放。当前互动率${pct(t.rate)}，五区域同口径为${pct(baseTotal.rate)}。`:'请调整平台、来源或阶段筛选。';
-      $('insightGrid').innerHTML=[['区域播放占比',`${pct(selectedShare)}五区域播放量`,'按相同平台、来源和阶段口径计算。'],['对比均值',`较单区域平均${vsAverage>=0?'高':'低'}${pct(Math.abs(vsAverage))}`,'单区域平均＝当前筛选五区域公开播放量÷5。'],['互动质量',`${pct(t.rate)} vs 全区${pct(baseTotal.rate)}`,'互动率用于观察公开回应强度，不等同于留存或付费。']].map(x=>`<article><span>${x[0]}</span><strong>${x[1]}</strong><p>${x[2]}</p></article>`).join('');
+      $('headlineDetail').textContent=t.views?`${topPlatform?.name||'—'}贡献该区域${pct(topPlatformShare)}公开播放量；头部10条内容贡献${pct(concentration)}播放。当前互动率${rateText}，五区域同口径为${baseRateText}。`:'请调整平台、来源或阶段筛选。';
+      $('insightGrid').innerHTML=[['区域播放占比',`${pct(selectedShare)}五区域播放量`,'按相同平台、内容类型、来源和阶段口径计算。'],['对比均值',`较单区域平均${vsAverage>=0?'高':'低'}${pct(Math.abs(vsAverage))}`,'单区域平均＝当前筛选五区域公开播放量÷5。'],['互动质量',`${rateText} vs 全区${baseRateText}`,'互动率仅比较播放与互动同时公开的内容。']].map(x=>`<article><span>${x[0]}</span><strong>${x[1]}</strong><p>${x[2]}</p></article>`).join('');
     }else{
       const regionShare=baseTotal.views&&topRegion?topRegion.views/baseTotal.views:0;
       $('headline').textContent=topRegion?`${topRegion.name}累计公开播放量最高`:'当前筛选暂无公开数据';
@@ -65,7 +68,7 @@
     renderBreakdown(rows);
   }
 
-  function renderBars(id,groups){const max=Math.max(1,...groups.map(x=>x.views));$(id).innerHTML=groups.map(g=>`<div class="bar-row"><div class="bar-label">${esc(g.name)}</div><div class="bar-track"><i style="width:${g.views/max*100}%"></i></div><div class="bar-meta"><strong>${compact(g.views)}</strong> 播放 · ${pct(g.rate)} · ${g.rows.length}条</div></div>`).join('')||'<p>暂无数据</p>'}
+  function renderBars(id,groups){const max=Math.max(1,...groups.map(x=>x.views));$(id).innerHTML=groups.map(g=>`<div class="bar-row"><div class="bar-label">${esc(g.name)}</div><div class="bar-track"><i style="width:${g.views/max*100}%"></i></div><div class="bar-meta"><strong>${g.viewCoverage?compact(g.views):'—'}</strong> 播放 · ${g.interactionCoverage?compact(g.interactions):'—'} 互动 · ${g.rows.length}条</div></div>`).join('')||'<p>暂无数据</p>'}
   function renderTrend(rows){
     const start=new Date('2026-10-29T00:00:00+08:00'),end=new Date(`${D.generatedAt||'2026-11-13'}T00:00:00+08:00`),days=Math.max(1,Math.floor((end-start)/86400000)+1),series=Array.from({length:days},(_,i)=>{const d=new Date(start.getTime()+i*86400000),key=`2026-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,daily=rows.filter(x=>x.publishDate===key);return{date:key,label:`${d.getMonth()+1}/${d.getDate()}`,views:daily.reduce((s,x)=>s+num(x.viewCount),0),interactions:daily.reduce((s,x)=>s+num(x.interactionCount),0),count:daily.length}}),w=900,h=205,p={l:50,r:18,t:14,b:38},actual=Math.max(...series.map(x=>x.views)),max=Math.max(actual,1),x=i=>p.l+i*(w-p.l-p.r)/Math.max(1,series.length-1),y=v=>p.t+(h-p.t-p.b)*(1-v/max),line=series.map((d,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(d.views).toFixed(1)}`).join(' '),area=`${line} L${x(series.length-1)},${h-p.b} L${x(0)},${h-p.b} Z`;
     $('trendTitle').textContent=`${overviewRegion||'五区域'}上线以来公开播放量`; $('trendPeak').textContent=actual?`单日发布内容峰值 ${compact(actual)}`:'当前筛选无上线后播放数据'; $('trendChart').innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="按发布日期汇总的公开播放量曲线"><defs><linearGradient id="tf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0a241" stop-opacity=".3"/><stop offset="1" stop-color="#f0a241" stop-opacity="0"/></linearGradient></defs><line x1="${p.l}" x2="${w-p.r}" y1="${h-p.b}" y2="${h-p.b}" class="grid-line"/><path d="${area}" fill="url(#tf)"/><path d="${line}" class="trend-line"/>${series.map((d,i)=>`<circle class="trend-hit" tabindex="0" cx="${x(i)}" cy="${y(d.views)}" r="11" data-date="${d.date}" data-views="${d.views}" data-interactions="${d.interactions}" data-count="${d.count}"/><circle class="trend-dot" cx="${x(i)}" cy="${y(d.views)}" r="3"/>`).join('')}${series.map((d,i)=>`<text x="${x(i)}" y="${h-11}" text-anchor="middle">${d.label}</text>`).join('')}</svg><div class="trend-tooltip" role="status"></div>`;
@@ -77,6 +80,7 @@
     renderBars('regionChart',REGIONS.map(name=>{const r=comparisonRows.filter(x=>x.region===name);return{name,rows:r,...total(r)}}));
     renderBars('platformChart',bestGroup(rows,'platform'));
     $('stageChart').innerHTML=STAGES.map(name=>{const r=rows.filter(x=>x.publishStage===name),t=total(r);return `<div class="stage-card"><span>${name}</span><strong>${compact(t.views)} 播放</strong><small>${r.length}条 · ${pct(t.rate)}互动率</small></div>`}).join('');
+    $('typeChart').innerHTML=TYPES.map(name=>{const r=rows.filter(x=>x.publishType===name),t=total(r);return `<div class="type-card"><div><span>${name}</span><b>${r.length} 条</b></div><strong>${t.viewCoverage?`${compact(t.views)} 播放`:'无公开播放口径'}</strong><small>${t.interactionCoverage?`${compact(t.interactions)} 互动`:'互动未公开'} · 播放覆盖 ${t.viewCoverage}/${r.length} · 互动覆盖 ${t.interactionCoverage}/${r.length}</small></div>`}).join('');
     renderRanking(rows);
   }
   function renderRanking(rows=overviewRows()){
